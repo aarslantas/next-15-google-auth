@@ -1,72 +1,37 @@
-// import { auth } from "@/auth";
-// import { NextResponse } from "next/server";
-// import type { NextRequest } from "next/server";
-
-// export async function middleware(request: NextRequest) {
-//   // Kullanıcının oturum bilgisini kontrol et
-//   const session = await auth();
-//   const isAuthPage = request.nextUrl.pathname.startsWith("/auth");
-
-//   // Eğer session.user yoksa yönlendirme yap
-
-//   // Kullanıcı oturum açmışsa isteğe devam et
-
-//   console.log("session123", session);
-
-//   if (!session?.user && !isAuthPage) {
-//     return NextResponse.redirect(new URL("/auth/signin", request.url));
-//   }
-
-//   if (session?.user && isAuthPage) {
-//     console.log("su", session?.user);
-//     return NextResponse.redirect(new URL("/", request.url));
-//   }
-
-//   return NextResponse.next();
-// }
-
-// export const config = {
-//   matcher: ["/dashboard/:path*", "/profile/:path*", "/auth/:path*"],
-// };
-
-import { getToken } from "next-auth/jwt";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-export async function middleware(request: NextRequest) {
-  const token = await getToken({
-    req: request,
-    secret: process.env.NEXTAUTH_SECRET, // NextAuth secret değeri
-  });
+export function middleware(request: NextRequest) {
+  const token = request.cookies.get("authjs.session-token")?.value;
 
   const { pathname } = request.nextUrl;
 
-  // Korumalı rotalar
-  const protectedPaths = ["/", "/profile"];
-  const isProtectedPath = protectedPaths.some((path) =>
-    pathname.startsWith(path)
-  );
+  console.log("Token:", token);
+  console.log("Pathname:", pathname);
 
-  // Giriş yapılmasını istemeyen rotalar (ör: /auth/signin)
-  const isAuthPage = pathname.startsWith("/auth");
-
-  console.log("isAuthPage", isAuthPage);
-  console.log("isProtectedPath", isProtectedPath);
-
-  // 1. Giriş yapılmamış ve korumalı bir rotaya gidiliyorsa
-  if (!token && isProtectedPath) {
-    return NextResponse.redirect(new URL("/auth/signin", request.url));
+  // Eğer kullanıcı login sayfasındaysa
+  if (pathname.startsWith("/auth/login")) {
+    if (token) {
+      // Eğer kullanıcı zaten giriş yapmışsa, ana sayfaya yönlendir
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+    // Kullanıcı login sayfasında kalabilir
+    return NextResponse.next();
   }
 
-  // 2. Giriş yapılmış ve oturum açma sayfasına gidiliyorsa
-  if (token && isAuthPage) {
-    return NextResponse.redirect(new URL("/", request.url));
+  // Eğer kullanıcı giriş yapmamışsa, korumalı rotalarda login sayfasına yönlendir
+  if (!token) {
+    return NextResponse.redirect(new URL("/auth/login", request.url));
   }
 
-  // 3. Giriş yapılmış ve kullanıcı mevcutsa isteğe izin ver
+  // Token varsa kullanıcıyı devam ettir
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/:path*"],
+  matcher: [
+    "/profile", // Korumalı rotalar
+    "/", // Ana sayfa
+    "/auth/login", // Login sayfası
+  ],
 };

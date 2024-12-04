@@ -2,7 +2,7 @@ import { socialLogout } from "@/actions";
 import Image from "next/image";
 
 export default async function Home() {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3002";
+  const baseUrl = "http://localhost:3001";
 
   // API'den kullanıcı verilerini al
   const res = await fetch(`${baseUrl}/api/users`);
